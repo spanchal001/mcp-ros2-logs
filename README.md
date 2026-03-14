@@ -57,6 +57,40 @@ Add to `~/.config/Claude/claude_desktop_config.json` (Linux) or `~/Library/Appli
 }
 ```
 
+### VS Code (GitHub Copilot)
+
+Add to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "ros2-logs": {
+      "command": "mcp-ros2-logs",
+      "env": {
+        "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs"
+      }
+    }
+  }
+}
+```
+
+Then use Copilot in agent mode (`@workspace`) to query your logs.
+
+### Cursor
+
+Open **Settings > MCP Servers > Add Server** and configure:
+
+```json
+{
+  "ros2-logs": {
+    "command": "mcp-ros2-logs",
+    "env": {
+      "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs"
+    }
+  }
+}
+```
+
 ## Tools
 
 ### list_runs
