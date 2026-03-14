@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from mcp_ros2_logs.parser import parse_log_file, parse_run
+from mcp_ros2_logs.parser import (
+    compile_format,
+    get_log_format,
+    parse_log_file,
+    parse_run,
+    _node_from_filename,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOOD_RUN = FIXTURES / "good_run"
@@ -158,3 +164,166 @@ class TestEdgeCases:
         entries = parse_log_file(GOOD_RUN / "talker_12345_20240414-140200.log")
         # First entry: 1713103320.000000000
         assert entries[0].timestamp == pytest.approx(1713103320.0)
+
+
+class TestCustomFormat:
+    def test_default_format_matches_fixtures(self) -> None:
+        fmt = compile_format("[{severity}] [{time}] [{name}]: {message}")
+        entries = parse_log_file(
+            GOOD_RUN / "talker_12345_20240414-140200.log", fmt=fmt
+        )
+        assert len(entries) == 26
+        assert entries[0].severity == "INFO"
+        assert entries[0].node == "talker"
+
+    def test_no_bracket_format(self, tmp_path: Path) -> None:
+        fmt = compile_format("{severity} {time} {name}: {message}")
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "INFO 1713103320.000000000 talker_node: Hello World 1\n"
+            "ERROR 1713103321.500000000 sensor: Timeout occurred\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 2
+        assert entries[0].severity == "INFO"
+        assert entries[0].node == "talker_node"
+        assert entries[0].message == "Hello World 1"
+        assert entries[1].severity == "ERROR"
+        assert entries[1].timestamp == pytest.approx(1713103321.5)
+
+    def test_extra_fields(self, tmp_path: Path) -> None:
+        fmt = compile_format(
+            "[{severity}] [{time}] [{name}] [{function_name}]: {message}"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "[INFO] [1713103320.000000000] [talker] [on_timer]: Publishing msg\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 1
+        assert entries[0].node == "talker"
+        assert entries[0].function_name == "on_timer"
+        assert entries[0].message == "Publishing msg"
+
+    def test_reordered_fields(self, tmp_path: Path) -> None:
+        fmt = compile_format("{time} [{severity}] [{name}]: {message}")
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "1713103320.000000000 [INFO] [talker]: Hello\n"
+            "1713103321.000000000 [ERROR] [sensor]: Fail\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 2
+        assert entries[0].severity == "INFO"
+        assert entries[0].node == "talker"
+        assert entries[1].severity == "ERROR"
+
+    def test_missing_timestamp(self, tmp_path: Path) -> None:
+        fmt = compile_format("[{severity}] [{name}]: {message}")
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "[INFO] [talker]: Hello World\n"
+            "[ERROR] [sensor]: Timeout\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 2
+        assert entries[0].timestamp == 0.0
+        assert entries[0].node == "talker"
+        assert entries[1].timestamp == 0.0
+
+    def test_missing_node_uses_filename(self, tmp_path: Path) -> None:
+        fmt = compile_format("[{severity}] [{time}]: {message}")
+        log_file = tmp_path / "talker_12345_20240414-140200.log"
+        log_file.write_text(
+            "[INFO] [1713103320.000000000]: Hello World\n"
+            "[ERROR] [1713103321.000000000]: Timeout\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 2
+        assert entries[0].node == "talker"
+        assert entries[1].node == "talker"
+
+    def test_message_in_middle(self, tmp_path: Path) -> None:
+        fmt = compile_format("[{severity}] {message} [{name}]")
+        log_file = tmp_path / "test.log"
+        log_file.write_text("[INFO] Hello World [talker]\n")
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 1
+        assert entries[0].message == "Hello World"
+        assert entries[0].node == "talker"
+
+    def test_multiline_with_custom_format(self, tmp_path: Path) -> None:
+        fmt = compile_format("{severity} {time} {name}: {message}")
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "ERROR 1713103320.000000000 planner: Failed\n"
+            "  Traceback (most recent call last):\n"
+            "    File 'main.py', line 10\n"
+            "INFO 1713103321.000000000 planner: Recovered\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 2
+        assert "Traceback" in entries[0].message
+        assert "\n" in entries[0].message
+        assert entries[1].message == "Recovered"
+
+    def test_special_regex_chars_in_format(self, tmp_path: Path) -> None:
+        fmt = compile_format("({severity}) [{time}] [{name}]: {message}")
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "(INFO) [1713103320.000000000] [talker]: Hello\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 1
+        assert entries[0].severity == "INFO"
+        assert entries[0].message == "Hello"
+
+    def test_env_var_integration(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(
+            "RCUTILS_CONSOLE_OUTPUT_FORMAT",
+            "{severity} {time} {name}: {message}",
+        )
+        fmt = get_log_format()
+        assert "severity" in fmt.field_order
+        assert "time" in fmt.field_order
+        assert "name" in fmt.field_order
+        assert "message" in fmt.field_order
+
+    def test_env_var_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("RCUTILS_CONSOLE_OUTPUT_FORMAT", raising=False)
+        fmt = get_log_format()
+        # Should match the default format
+        entries_default = parse_log_file(
+            GOOD_RUN / "talker_12345_20240414-140200.log", fmt=fmt
+        )
+        assert len(entries_default) == 26
+
+    def test_file_name_and_line_number_fields(self, tmp_path: Path) -> None:
+        fmt = compile_format(
+            "[{severity}] [{time}] [{name}] [{file_name}:{line_number}]: {message}"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(
+            "[INFO] [1713103320.000000000] [talker] [talker.cpp:42]: Publishing\n"
+        )
+        entries = parse_log_file(log_file, fmt=fmt)
+        assert len(entries) == 1
+        assert entries[0].source_code_file == "talker.cpp"
+        assert entries[0].source_code_line == 42
+
+
+class TestNodeFromFilename:
+    def test_standard_ros2_filename(self) -> None:
+        assert _node_from_filename("talker_12345_20240414-140200.log") == "talker"
+
+    def test_multi_word_node(self) -> None:
+        assert (
+            _node_from_filename("motion_planner_12345_20240414-140200.log")
+            == "motion_planner"
+        )
+
+    def test_simple_filename(self) -> None:
+        assert _node_from_filename("console_output.log") == "console_output"
+
+    def test_no_stem(self) -> None:
+        assert _node_from_filename(".log") == "unknown"

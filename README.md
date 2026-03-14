@@ -129,7 +129,7 @@ It auto-detects whether a path is a single log file, a run directory (contains `
 
 ## Log Format
 
-Parses the standard ROS2 spdlog format:
+Parses the standard ROS2 spdlog default format:
 
 ```
 [SEVERITY] [EPOCH.NANOSECONDS] [node_name]: message
@@ -144,6 +144,35 @@ Example:
 ```
 
 Multi-line messages (stack traces) are handled automatically.
+
+### Custom Log Formats
+
+If your ROS2 nodes use a custom `RCUTILS_CONSOLE_OUTPUT_FORMAT`, pass it as an environment variable when registering the MCP server:
+
+```bash
+claude mcp add --scope user ros2-logs \
+  -e RCUTILS_CONSOLE_OUTPUT_FORMAT="{severity} {time} {name}: {message}" \
+  -- mcp-ros2-logs
+```
+
+Or for Claude Desktop, add it to the `env` block:
+
+```json
+{
+  "mcpServers": {
+    "ros2-logs": {
+      "command": "mcp-ros2-logs",
+      "env": {
+        "RCUTILS_CONSOLE_OUTPUT_FORMAT": "{severity} {time} {name}: {message}"
+      }
+    }
+  }
+}
+```
+
+Supported placeholders: `{severity}`, `{time}`, `{name}`, `{message}`, `{function_name}`, `{file_name}`, `{line_number}`.
+
+When `{name}` is absent from the format, the node name is inferred from the log filename. When `{time}` is absent, entries are ordered by their position in the file.
 
 ## Development
 
