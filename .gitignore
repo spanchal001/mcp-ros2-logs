@@ -17,3 +17,4 @@ env/
 !tests/fixtures/**/*.log
 .mypy_cache/
 .pdm-python
+ARCHITECTURE.md
