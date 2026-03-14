@@ -7,6 +7,12 @@ An MCP server that gives AI agents the ability to analyze ROS2 log files across 
 ## Install
 
 ```bash
+pipx install mcp-ros2-logs
+```
+
+Or with pip (in a virtual environment):
+
+```bash
 pip install mcp-ros2-logs
 ```
 
