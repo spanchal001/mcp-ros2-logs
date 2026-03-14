@@ -29,13 +29,15 @@ pdm install
 ### Claude Code
 
 ```bash
-claude mcp add ros2-logs -- mcp-ros2-logs
+claude mcp add --scope user ros2-logs -- mcp-ros2-logs
 ```
 
-Or with a custom log directory:
+This makes the server available in all Claude Code sessions. For project-scoped setup (current directory only), omit `--scope user`.
+
+To set a custom log directory:
 
 ```bash
-claude mcp add ros2-logs -e MCP_ROS2_LOGS_DIR=/path/to/logs -- mcp-ros2-logs
+claude mcp add --scope user ros2-logs -e MCP_ROS2_LOGS_DIR=/path/to/logs -- mcp-ros2-logs
 ```
 
 ### Claude Desktop
