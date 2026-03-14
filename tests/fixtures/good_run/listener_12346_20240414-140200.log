@@ -1,0 +1,25 @@
+[INFO] [1713103320.050000000] [listener]: Listener node has been started
+[DEBUG] [1713103320.150000000] [listener]: Subscribing to topic /chatter
+[INFO] [1713103320.250000000] [listener]: Subscription created on /chatter with QoS depth 10
+[INFO] [1713103321.050000000] [listener]: Received: Hello World 1
+[DEBUG] [1713103321.051000000] [listener]: Callback execution time: 0.1ms
+[INFO] [1713103322.050000000] [listener]: Received: Hello World 2
+[INFO] [1713103323.050000000] [listener]: Received: Hello World 3
+[INFO] [1713103324.050000000] [listener]: Received: Hello World 4
+[INFO] [1713103325.050000000] [listener]: Received: Hello World 5
+[INFO] [1713103326.050000000] [listener]: Received: Hello World 6
+[INFO] [1713103327.050000000] [listener]: Received: Hello World 7
+[INFO] [1713103328.050000000] [listener]: Received: Hello World 8
+[INFO] [1713103329.050000000] [listener]: Received: Hello World 9
+[INFO] [1713103330.050000000] [listener]: Received: Hello World 10
+[INFO] [1713103331.050000000] [listener]: Received: Hello World 11
+[INFO] [1713103332.050000000] [listener]: Received: Hello World 12
+[INFO] [1713103333.050000000] [listener]: Received: Hello World 13
+[INFO] [1713103334.050000000] [listener]: Received: Hello World 14
+[INFO] [1713103335.050000000] [listener]: Received: Hello World 15
+[DEBUG] [1713103335.550000000] [listener]: Message queue depth: 0
+[INFO] [1713103336.050000000] [listener]: Received: Hello World 16
+[INFO] [1713103337.050000000] [listener]: Received: Hello World 17
+[INFO] [1713103338.050000000] [listener]: Received: Hello World 18
+[INFO] [1713103339.050000000] [listener]: Received: Hello World 19
+[INFO] [1713103340.050000000] [listener]: Received: Hello World 20

@@ -1,0 +1,24 @@
+[INFO] [1713103320.000000000] [sensor_driver]: Sensor driver node started
+[INFO] [1713103320.100000000] [sensor_driver]: Connected to lidar on /dev/ttyUSB0
+[INFO] [1713103320.200000000] [sensor_driver]: Publishing laser scan on /scan at 10Hz
+[INFO] [1713103321.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103322.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103323.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103324.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103325.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103326.000000000] [sensor_driver]: Scan received: 718 points, range 0.1-12.0m
+[INFO] [1713103327.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103328.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[INFO] [1713103329.000000000] [sensor_driver]: Scan received: 715 points, range 0.1-12.0m
+[INFO] [1713103330.000000000] [sensor_driver]: Scan received: 720 points, range 0.1-12.0m
+[WARN] [1713103330.500000000] [sensor_driver]: Scan incomplete: only 312 points received
+[WARN] [1713103331.000000000] [sensor_driver]: Lidar response delayed by 200ms
+[ERROR] [1713103351.000000000] [sensor_driver]: Lidar data timeout after 500ms
+[ERROR] [1713103351.100000000] [sensor_driver]: Failed to read from /dev/ttyUSB0: Connection timed out
+[WARN] [1713103351.200000000] [sensor_driver]: Attempting reconnect to lidar (1/3)
+[ERROR] [1713103351.700000000] [sensor_driver]: Reconnect failed: device not responding
+[WARN] [1713103351.800000000] [sensor_driver]: Attempting reconnect to lidar (2/3)
+[ERROR] [1713103352.300000000] [sensor_driver]: Reconnect failed: device not responding
+[WARN] [1713103352.400000000] [sensor_driver]: Attempting reconnect to lidar (3/3)
+[ERROR] [1713103352.900000000] [sensor_driver]: Reconnect failed: device not responding
+[FATAL] [1713103353.000000000] [sensor_driver]: All reconnect attempts exhausted, shutting down

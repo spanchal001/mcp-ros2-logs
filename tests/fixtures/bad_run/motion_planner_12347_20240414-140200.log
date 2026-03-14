@@ -1,0 +1,27 @@
+[INFO] [1713103320.080000000] [motion_planner]: Motion planner node initialized
+[INFO] [1713103320.180000000] [motion_planner]: Waiting for collision check service /check_collision
+[INFO] [1713103320.300000000] [motion_planner]: Collision check service available
+[INFO] [1713103322.000000000] [motion_planner]: Planning trajectory to goal (2.0, 3.5)
+[INFO] [1713103322.100000000] [motion_planner]: Trajectory computed: 23 waypoints
+[INFO] [1713103322.150000000] [motion_planner]: Collision check passed, executing trajectory
+[INFO] [1713103325.000000000] [motion_planner]: Planning trajectory to goal (5.1, 1.2)
+[INFO] [1713103325.120000000] [motion_planner]: Trajectory computed: 45 waypoints
+[INFO] [1713103325.180000000] [motion_planner]: Collision check passed, executing trajectory
+[INFO] [1713103328.000000000] [motion_planner]: Planning trajectory to goal (0.5, 4.8)
+[INFO] [1713103328.060000000] [motion_planner]: Trajectory computed: 12 waypoints
+[INFO] [1713103328.090000000] [motion_planner]: Collision check passed, executing trajectory
+[WARN] [1713103351.600000000] [motion_planner]: Collision check service returned failure
+[WARN] [1713103351.700000000] [motion_planner]: Retrying collision check (1/3)
+[ERROR] [1713103351.800000000] [motion_planner]: Collision check service unavailable
+[WARN] [1713103351.900000000] [motion_planner]: Retrying collision check (2/3)
+[ERROR] [1713103352.000000000] [motion_planner]: Collision check service unavailable
+[FATAL] [1713103352.100000000] [motion_planner]: Aborting trajectory — collision check unavailable
+Traceback (most recent call last):
+  File "/opt/ros/humble/lib/python3.10/motion_planner/planner_node.py", line 142, in plan_callback
+    trajectory = self.compute_trajectory(goal)
+  File "/opt/ros/humble/lib/python3.10/motion_planner/planner_node.py", line 89, in compute_trajectory
+    result = self._check_collision(trajectory)
+  File "/opt/ros/humble/lib/python3.10/motion_planner/planner_node.py", line 67, in _check_collision
+    raise TimeoutError("Collision checker service unavailable")
+TimeoutError: Collision checker service unavailable
+[ERROR] [1713103352.200000000] [motion_planner]: Emergency stop triggered

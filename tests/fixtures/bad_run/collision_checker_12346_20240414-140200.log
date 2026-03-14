@@ -1,0 +1,18 @@
+[INFO] [1713103320.050000000] [collision_checker]: Collision checker node started
+[INFO] [1713103320.150000000] [collision_checker]: Subscribing to /scan for obstacle detection
+[INFO] [1713103320.250000000] [collision_checker]: Collision check service ready on /check_collision
+[INFO] [1713103321.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103322.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103323.050000000] [collision_checker]: Scan processed: 1 obstacle in path at 3.2m
+[INFO] [1713103324.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103325.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103326.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103327.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103328.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[INFO] [1713103329.050000000] [collision_checker]: Scan processed: 2 obstacles in path at 1.5m, 4.1m
+[INFO] [1713103330.050000000] [collision_checker]: Scan processed: 0 obstacles in path
+[WARN] [1713103331.050000000] [collision_checker]: No scan data received for 1.0s
+[WARN] [1713103332.050000000] [collision_checker]: No scan data received for 2.0s
+[ERROR] [1713103351.500000000] [collision_checker]: No valid point cloud received from sensor_driver
+[ERROR] [1713103351.600000000] [collision_checker]: Cannot perform collision check without scan data
+[ERROR] [1713103351.700000000] [collision_checker]: Service /check_collision returning failure status

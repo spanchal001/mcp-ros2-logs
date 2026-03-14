@@ -1,0 +1,32 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "mcp-ros2-logs"
+version = "0.1.0"
+description = "MCP server for cross-node ROS2 log analysis"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "mcp>=1.2.0",
+]
+
+[project.scripts]
+mcp-ros2-logs = "mcp_ros2_logs.server:main"
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

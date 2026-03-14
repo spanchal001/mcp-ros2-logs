@@ -1,0 +1,24 @@
+[INFO] [1713103320.080000000] [planner]: Motion planner node initialized
+[DEBUG] [1713103320.180000000] [planner]: Loading costmap from parameter server
+[INFO] [1713103320.300000000] [planner]: Costmap loaded successfully (200x200 cells)
+[INFO] [1713103322.000000000] [planner]: Planning cycle started for goal (2.0, 3.5)
+[DEBUG] [1713103322.050000000] [planner]: A* search expanded 142 nodes
+[INFO] [1713103322.100000000] [planner]: Path found: 23 waypoints, cost 4.72
+[INFO] [1713103325.000000000] [planner]: Planning cycle started for goal (5.1, 1.2)
+[DEBUG] [1713103325.080000000] [planner]: A* search expanded 289 nodes
+[INFO] [1713103325.120000000] [planner]: Path found: 45 waypoints, cost 7.31
+[INFO] [1713103328.000000000] [planner]: Planning cycle started for goal (0.5, 4.8)
+[DEBUG] [1713103328.030000000] [planner]: A* search expanded 98 nodes
+[INFO] [1713103328.060000000] [planner]: Path found: 12 waypoints, cost 2.15
+[INFO] [1713103331.000000000] [planner]: Planning cycle started for goal (3.3, 2.7)
+[DEBUG] [1713103331.060000000] [planner]: A* search expanded 175 nodes
+[INFO] [1713103331.100000000] [planner]: Path found: 31 waypoints, cost 5.44
+[INFO] [1713103334.000000000] [planner]: Planning cycle started for goal (1.0, 0.5)
+[DEBUG] [1713103334.020000000] [planner]: A* search expanded 56 nodes
+[INFO] [1713103334.040000000] [planner]: Path found: 8 waypoints, cost 1.23
+[INFO] [1713103337.000000000] [planner]: Planning cycle started for goal (4.2, 3.9)
+[DEBUG] [1713103337.070000000] [planner]: A* search expanded 220 nodes
+[INFO] [1713103337.110000000] [planner]: Path found: 38 waypoints, cost 6.18
+[INFO] [1713103340.000000000] [planner]: Planning cycle started for goal (2.8, 1.1)
+[DEBUG] [1713103340.040000000] [planner]: A* search expanded 130 nodes
+[INFO] [1713103340.070000000] [planner]: Path found: 19 waypoints, cost 3.67

@@ -1,0 +1,26 @@
+[INFO] [1713103320.000000000] [talker]: Talker node has been started
+[DEBUG] [1713103320.100000000] [talker]: Initializing publisher on topic /chatter
+[INFO] [1713103320.200000000] [talker]: Publisher created on /chatter with QoS depth 10
+[INFO] [1713103321.000000000] [talker]: Publishing: Hello World 1
+[DEBUG] [1713103321.001000000] [talker]: Serialized message size: 128 bytes
+[INFO] [1713103322.000000000] [talker]: Publishing: Hello World 2
+[DEBUG] [1713103322.001000000] [talker]: Serialized message size: 128 bytes
+[INFO] [1713103323.000000000] [talker]: Publishing: Hello World 3
+[INFO] [1713103324.000000000] [talker]: Publishing: Hello World 4
+[INFO] [1713103325.000000000] [talker]: Publishing: Hello World 5
+[INFO] [1713103326.000000000] [talker]: Publishing: Hello World 6
+[INFO] [1713103327.000000000] [talker]: Publishing: Hello World 7
+[INFO] [1713103328.000000000] [talker]: Publishing: Hello World 8
+[INFO] [1713103329.000000000] [talker]: Publishing: Hello World 9
+[INFO] [1713103330.000000000] [talker]: Publishing: Hello World 10
+[INFO] [1713103331.000000000] [talker]: Publishing: Hello World 11
+[INFO] [1713103332.000000000] [talker]: Publishing: Hello World 12
+[INFO] [1713103333.000000000] [talker]: Publishing: Hello World 13
+[INFO] [1713103334.000000000] [talker]: Publishing: Hello World 14
+[INFO] [1713103335.000000000] [talker]: Publishing: Hello World 15
+[DEBUG] [1713103335.500000000] [talker]: Timer callback latency: 0.2ms
+[INFO] [1713103336.000000000] [talker]: Publishing: Hello World 16
+[INFO] [1713103337.000000000] [talker]: Publishing: Hello World 17
+[INFO] [1713103338.000000000] [talker]: Publishing: Hello World 18
+[INFO] [1713103339.000000000] [talker]: Publishing: Hello World 19
+[INFO] [1713103340.000000000] [talker]: Publishing: Hello World 20
