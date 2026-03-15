@@ -32,15 +32,19 @@ def resolve_log_path(log_dir: str | None = None) -> Path:
     return Path.home() / ".ros" / "log"
 
 
-def classify_path(path: Path) -> Literal["file", "run_dir", "log_root"]:
+def classify_path(path: Path) -> Literal["file", "run_dir", "bag_dir", "log_root"]:
     """Auto-detect what the path points to.
 
     - file: single .log file
     - run_dir: directory containing .log files directly
+    - bag_dir: ROS2 bag directory (contains metadata.yaml)
     - log_root: directory containing run subdirectories
     """
     if path.is_file():
         return "file"
+
+    if (path / "metadata.yaml").exists():
+        return "bag_dir"
 
     if any(path.glob("*.log")):
         return "run_dir"

@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_ros2_logs.anomaly import detect_anomalies
 from mcp_ros2_logs.compare import compare_runs
+from mcp_ros2_logs.correlate import correlate_logs_to_bag
 from mcp_ros2_logs.query import get_node_summary, query_logs
 from mcp_ros2_logs.store import LogStore
 from mcp_ros2_logs.timeline import (
@@ -159,6 +161,11 @@ def get_node_summary_tool(
     if summary is None:
         return f"Node '{node}' not found. Available nodes: {', '.join(info.nodes)}"
 
+    return _format_node_summary(summary)
+
+
+def _format_node_summary(summary: object) -> str:
+    """Format a NodeSummary into readable text."""
     lines = [
         f"Node: {summary.node}",
         f"Uptime: {summary.uptime_seconds:.1f}s "
@@ -202,6 +209,40 @@ def _ts_short(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%H:%M:%S.%f")[:-3]
 
 
+def _format_timeline(result: object) -> str:
+    """Format a TimelineResult into readable text."""
+    if not result.events:
+        return "No events found."
+
+    lines: list[str] = []
+    for ev in result.events:
+        if isinstance(ev, MessageGroup):
+            start = _ts_short(ev.time_start)
+            end = _ts_short(ev.time_end)
+            if ev.count == 1:
+                lines.append(
+                    f"[{start}] {ev.node}: {ev.severity} — {ev.sample_message}"
+                )
+            else:
+                lines.append(
+                    f"[{start} – {end}] {ev.node}: "
+                    f"{ev.count} {ev.severity} — {ev.sample_message}"
+                )
+        elif isinstance(ev, SeverityTransition):
+            ts = _ts_short(ev.timestamp)
+            lines.append(
+                f"[{ts}] {ev.node}: {ev.from_severity} -> {ev.to_severity}"
+            )
+        elif isinstance(ev, NodeGap):
+            start = _ts_short(ev.gap_start)
+            end = _ts_short(ev.gap_end)
+            lines.append(
+                f"[{start} – {end}] {ev.node}: gap ({ev.gap_seconds:.1f}s, no messages)"
+            )
+
+    return "\n".join(lines)
+
+
 @mcp.tool()
 def get_timeline_tool(
     run_id: str,
@@ -236,36 +277,7 @@ def get_timeline_tool(
         nodes=nodes,
     )
 
-    if not result.events:
-        return "No events found."
-
-    lines: list[str] = []
-    for ev in result.events:
-        if isinstance(ev, MessageGroup):
-            start = _ts_short(ev.time_start)
-            end = _ts_short(ev.time_end)
-            if ev.count == 1:
-                lines.append(
-                    f"[{start}] {ev.node}: {ev.severity} — {ev.sample_message}"
-                )
-            else:
-                lines.append(
-                    f"[{start} – {end}] {ev.node}: "
-                    f"{ev.count} {ev.severity} — {ev.sample_message}"
-                )
-        elif isinstance(ev, SeverityTransition):
-            ts = _ts_short(ev.timestamp)
-            lines.append(
-                f"[{ts}] {ev.node}: {ev.from_severity} -> {ev.to_severity}"
-            )
-        elif isinstance(ev, NodeGap):
-            start = _ts_short(ev.gap_start)
-            end = _ts_short(ev.gap_end)
-            lines.append(
-                f"[{start} – {end}] {ev.node}: gap ({ev.gap_seconds:.1f}s, no messages)"
-            )
-
-    return "\n".join(lines)
+    return _format_timeline(result)
 
 
 @mcp.tool()
@@ -343,6 +355,312 @@ def compare_runs_tool(
         for diff in result.timing_diffs:
             lines.append(f"  {diff}")
 
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def detect_anomalies_tool(
+    run_id: str,
+    baseline_ratio: float = 0.3,
+    min_severity_score: float = 0.0,
+    log_dir: str | None = None,
+) -> str:
+    """Detect anomalous patterns in a ROS2 log run. Use after load_run.
+
+    Statistically analyzes the run using the first portion as a baseline for
+    "normal" behavior, then flags deviations: rate spikes, new error patterns,
+    severity escalations, silence gaps, and error bursts.
+
+    Args:
+        run_id: Run ID from list_runs or a direct path to a log file/directory.
+        baseline_ratio: Fraction of the run (by time) to use as baseline
+                        (default 0.3 = first 30%).
+        min_severity_score: Only return anomalies with severity_score >= this
+                            value (0.0-1.0). Default 0.0 returns all.
+        log_dir: Optional path to log directory override.
+    """
+    info = store.get(run_id)
+    if info is None:
+        info = store.load(run_id, log_dir)
+
+    anomalies = detect_anomalies(info.entries, baseline_ratio=baseline_ratio)
+
+    if min_severity_score > 0:
+        anomalies = [a for a in anomalies if a.severity_score >= min_severity_score]
+
+    if not anomalies:
+        return "No anomalies detected."
+
+    lines = [f"Anomalies detected: {len(anomalies)}", ""]
+    for a in anomalies:
+        ts = _ts_to_str(a.timestamp)
+        lines.append(
+            f"[{a.anomaly_type}] [{ts}] [{a.node}] "
+            f"(score: {a.severity_score:.2f}): {a.description}"
+        )
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_bag_topics(
+    run_id: str,
+    log_dir: str | None = None,
+) -> str:
+    """List topics in a ROS2 bag file with message types and counts.
+
+    Args:
+        run_id: Bag directory name or path.
+        log_dir: Optional path to log directory override.
+    """
+    bag_info, _ = store.get_bag(run_id) or store.load_bag(run_id, log_dir)
+
+    lines = [
+        f"Bag: {bag_info.path.name}",
+        f"Duration: {bag_info.duration:.1f}s",
+        f"Total messages: {bag_info.message_count}",
+        "",
+        "Topics:",
+    ]
+    for t in bag_info.topics:
+        lines.append(f"  {t['name']} [{t['type']}] — {t['count']} messages")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def query_bag_messages(
+    run_id: str,
+    topic: str | None = None,
+    time_start: str | None = None,
+    time_end: str | None = None,
+    limit: int = 50,
+    log_dir: str | None = None,
+) -> str:
+    """Query bag messages filtered by topic and time range.
+
+    Args:
+        run_id: Bag directory name or path.
+        topic: Filter by topic name (e.g., "/scan", "/cmd_vel").
+        time_start: Start time filter (epoch or relative "-30s").
+        time_end: End time filter (epoch or relative).
+        limit: Maximum messages to return (default 50).
+        log_dir: Optional path to log directory override.
+    """
+    bag_info, messages = store.get_bag(run_id) or store.load_bag(run_id, log_dir)
+
+    filtered = messages
+    if topic:
+        filtered = [m for m in filtered if m.topic == topic]
+
+    if time_start:
+        ts = float(time_start) if not time_start.startswith(("-", "+")) else _resolve_bag_time(time_start, bag_info)
+        filtered = [m for m in filtered if m.timestamp >= ts]
+    if time_end:
+        te = float(time_end) if not time_end.startswith(("-", "+")) else _resolve_bag_time(time_end, bag_info)
+        filtered = [m for m in filtered if m.timestamp <= te]
+
+    total = len(filtered)
+    truncated = total > limit
+    filtered = filtered[:limit]
+
+    lines = [f"Messages: {total}"]
+    if truncated:
+        lines[0] += f" (showing first {limit})"
+    lines.append("")
+
+    for m in filtered:
+        ts = _ts_to_str(m.timestamp)
+        lines.append(f"[{ts}] {m.topic} [{m.message_type}] ({m.size} bytes)")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def correlate_tool(
+    run_id: str,
+    bag_run_id: str | None = None,
+    severity: str = "ERROR,FATAL",
+    window_ms: float = 100.0,
+    topics: str | None = None,
+    log_dir: str | None = None,
+) -> str:
+    """Correlate log entries with bag topic messages within a time window.
+
+    Shows what was happening on ROS2 topics around the time of log events
+    (typically errors). Can correlate logs from one run with a bag from
+    a different run if they share the same time window.
+
+    Args:
+        run_id: Run ID containing the log files.
+        bag_run_id: Run ID containing the bag file. Defaults to run_id
+                    if not provided (same run has both logs and bag).
+        severity: Log severity filter (default "ERROR,FATAL").
+        window_ms: Time window in milliseconds (default 100ms, symmetric).
+        topics: Comma-separated topic names to include (default: all topics).
+        log_dir: Optional path to log directory override.
+    """
+    info = store.get(run_id)
+    if info is None:
+        info = store.load(run_id, log_dir)
+
+    bag_id = bag_run_id or run_id
+    bag_data = store.get_bag(bag_id)
+    if bag_data is None:
+        try:
+            bag_data = store.load_bag(bag_id, log_dir)
+        except FileNotFoundError:
+            return f"No bag file found for run '{bag_id}'."
+
+    _, bag_messages = bag_data
+    topic_list = [t.strip() for t in topics.split(",")] if topics else None
+
+    correlations = correlate_logs_to_bag(
+        info.entries,
+        bag_messages,
+        window_ms=window_ms,
+        topics=topic_list,
+        severity=severity,
+    )
+
+    if not correlations:
+        return "No correlations found."
+
+    lines = [f"Correlations: {len(correlations)}", ""]
+    for c in correlations:
+        ts = _ts_to_str(c.log_entry.timestamp)
+        lines.append(
+            f"[{c.log_entry.severity}] [{ts}] [{c.log_entry.node}]: "
+            f"{c.log_entry.message.split(chr(10), 1)[0]}"
+        )
+        # Group nearby messages by topic
+        by_topic: dict[str, list[object]] = {}
+        for m in c.nearby_messages:
+            by_topic.setdefault(m.topic, []).append(m)
+        lines.append(f"  Nearby topics (within +/-{window_ms:.0f}ms):")
+        for topic_name, msgs in sorted(by_topic.items()):
+            msg_type = msgs[0].message_type
+            lines.append(
+                f"    {topic_name} ({len(msgs)} msgs, {msg_type})"
+            )
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def tail_logs_tool(
+    run_id: str,
+    log_dir: str | None = None,
+) -> str:
+    """Tail a ROS2 log run for new entries since last check.
+
+    First call loads the run and returns a summary. Subsequent calls
+    return only new entries appended since the previous call. Useful
+    for monitoring an active ROS2 system.
+
+    Args:
+        run_id: Run ID from list_runs or a direct path to a log file/directory.
+        log_dir: Optional path to log directory override.
+    """
+    new_entries, is_first = store.tail(run_id, log_dir)
+
+    if is_first:
+        info = store.get(run_id)
+        assert info is not None
+        return (
+            f"Tailing {run_id}: {len(info.entries)} existing entries, "
+            f"{len(info.nodes)} nodes ({', '.join(info.nodes)}). "
+            f"Call again to check for new entries."
+        )
+
+    if not new_entries:
+        return "No new entries."
+
+    lines = [f"New entries: {len(new_entries)}", ""]
+    for e in new_entries:
+        ts = _ts_to_str(e.timestamp)
+        lines.append(f"[{e.severity}] [{ts}] [{e.node}]: {e.message}")
+
+    return "\n".join(lines)
+
+
+def _resolve_bag_time(time_str: str, bag_info: object) -> float:
+    """Resolve relative time against bag time range."""
+    start, end = bag_info.time_range
+    if time_str.startswith("-"):
+        return end + float(time_str[:-1] if time_str.endswith("s") else time_str)
+    elif time_str.startswith("+"):
+        return start + float(time_str[1:-1] if time_str.endswith("s") else time_str[1:])
+    return float(time_str)
+
+
+# ---------------------------------------------------------------------------
+# MCP Resources
+# ---------------------------------------------------------------------------
+
+
+@mcp.resource("runs://list")
+def resource_list_runs() -> str:
+    """List available ROS2 log runs."""
+    summaries = store.list_runs()
+    return json.dumps(
+        [
+            {
+                "run_id": s.run_id,
+                "path": str(s.path),
+                "num_files": s.num_files,
+                "total_lines": s.total_lines,
+            }
+            for s in summaries
+        ],
+        indent=2,
+    )
+
+
+@mcp.resource("runs://{run_id}/summary")
+def resource_run_summary(run_id: str) -> str:
+    """Summary of a loaded ROS2 log run."""
+    info = store.get(run_id) or store.load(run_id)
+    return json.dumps(
+        {
+            "run_id": info.summary.run_id,
+            "nodes": info.nodes,
+            "severity_counts": info.severity_counts,
+            "time_range": list(info.time_range),
+            "num_entries": len(info.entries),
+        },
+        indent=2,
+    )
+
+
+@mcp.resource("runs://{run_id}/nodes/{node}/summary")
+def resource_node_summary(run_id: str, node: str) -> str:
+    """Detailed summary of a specific node's log activity."""
+    info = store.get(run_id) or store.load(run_id)
+    summary = get_node_summary(info.entries, node)
+    if summary is None:
+        return f"Node '{node}' not found. Available nodes: {', '.join(info.nodes)}"
+    return _format_node_summary(summary)
+
+
+@mcp.resource("runs://{run_id}/timeline")
+def resource_timeline(run_id: str) -> str:
+    """Condensed narrative timeline of a ROS2 log run."""
+    info = store.get(run_id) or store.load(run_id)
+    result = get_timeline(info.entries)
+    return _format_timeline(result)
+
+
+@mcp.resource("runs://{run_id}/errors")
+def resource_errors(run_id: str) -> str:
+    """All ERROR and FATAL log entries from a run."""
+    info = store.get(run_id) or store.load(run_id)
+    result = query_logs(info.entries, severity="ERROR,FATAL")
+    lines = [f"Total errors: {result.total_matches}", ""]
+    for e in result.matches:
+        ts = _ts_to_str(e.timestamp)
+        lines.append(f"[{e.severity}] [{ts}] [{e.node}]: {e.message}")
     return "\n".join(lines)
 
 

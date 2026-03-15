@@ -149,6 +149,62 @@ Diff two runs to find what changed. Shows new/missing nodes, severity distributi
 "what's different between yesterday's run and today's?"
 ```
 
+### detect_anomalies
+
+Statistically flags unusual patterns using the first portion of a run as a baseline. Detects rate spikes, new error patterns, severity escalations, silence gaps, and error bursts.
+
+```
+"detect anomalies in bad_run"
+"find anomalies with severity score above 0.5"
+```
+
+### list_bag_topics
+
+List topics in a ROS2 bag file (.db3/.mcap) with message types and counts. No ROS2 installation or message deserialization needed.
+
+```
+"list bag topics in my_recording"
+```
+
+### query_bag_messages
+
+Query bag messages filtered by topic and time range. Shows timestamps, topic names, message types, and sizes.
+
+```
+"show messages from /scan topic in my_recording"
+"query bag messages from the last 10 seconds"
+```
+
+### correlate
+
+Cross-reference log entries with bag topic messages within a time window. Shows what was happening on ROS2 topics around errors. Can correlate logs from one run with a bag from a different run.
+
+```
+"correlate errors in bad_run with bag from bag_recording"
+"correlate errors with bag topics, 500ms window"
+```
+
+### tail_logs
+
+Tail a log run for new entries since the last check. First call loads the run, subsequent calls return only new entries. Useful for monitoring an active ROS2 system.
+
+```
+"tail my_live_run"
+"check for new log entries"
+```
+
+## MCP Resources
+
+The server also exposes log data as browsable MCP resources:
+
+| URI | Description |
+|-----|-------------|
+| `runs://list` | List of available runs |
+| `runs://{run_id}/summary` | Run overview (nodes, severity counts, time range) |
+| `runs://{run_id}/nodes/{node}/summary` | Per-node detailed summary |
+| `runs://{run_id}/timeline` | Condensed narrative timeline |
+| `runs://{run_id}/errors` | All ERROR/FATAL entries |
+
 ## Log Path Resolution
 
 The server resolves the log directory using this priority chain:
@@ -159,7 +215,7 @@ The server resolves the log directory using this priority chain:
 4. `$ROS_HOME/log/`
 5. `~/.ros/log/`
 
-It auto-detects whether a path is a single log file, a run directory (contains `.log` files), or a log root (contains run subdirectories).
+It auto-detects whether a path is a single log file, a run directory (contains `.log` files), a bag directory (contains `metadata.yaml`), or a log root (contains run subdirectories).
 
 ## Log Format
 

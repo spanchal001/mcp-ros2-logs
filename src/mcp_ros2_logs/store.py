@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from mcp_ros2_logs.bag import BagInfo, BagMessage, parse_bag
 from mcp_ros2_logs.parser import LogEntry, parse_log_file, parse_run
 from mcp_ros2_logs.resolver import classify_path, resolve_log_path
+from mcp_ros2_logs.tail import TailWatcher
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +31,8 @@ class LogStore:
 
     def __init__(self) -> None:
         self._cache: dict[str, RunInfo] = {}
+        self._bag_cache: dict[str, tuple[BagInfo, list[BagMessage]]] = {}
+        self._tail_watcher: TailWatcher = TailWatcher()
 
     def list_runs(self, log_dir: str | None = None) -> list[RunSummary]:
         root = resolve_log_path(log_dir)
@@ -73,6 +77,48 @@ class LogStore:
 
     def get(self, run_id: str) -> RunInfo | None:
         return self._cache.get(run_id)
+
+    def load_bag(
+        self, run_id: str, log_dir: str | None = None
+    ) -> tuple[BagInfo, list[BagMessage]]:
+        if run_id in self._bag_cache:
+            return self._bag_cache[run_id]
+
+        root = resolve_log_path(log_dir)
+        bag_path = root / run_id
+        if not bag_path.exists():
+            bag_path = Path(run_id)
+        if not bag_path.exists():
+            raise FileNotFoundError(f"Bag not found: {run_id}")
+
+        result = parse_bag(bag_path)
+        self._bag_cache[run_id] = result
+        return result
+
+    def get_bag(self, run_id: str) -> tuple[BagInfo, list[BagMessage]] | None:
+        return self._bag_cache.get(run_id)
+
+    def tail(
+        self, run_id: str, log_dir: str | None = None
+    ) -> tuple[list[LogEntry], bool]:
+        """Return new log entries since last tail call.
+
+        Returns (new_entries, is_first_call). On first call, loads the full
+        run and initializes tail tracking; returns empty entries list.
+        """
+        is_first = not self._tail_watcher.has_state(run_id)
+
+        if is_first:
+            info = self.load(run_id, log_dir)
+            self._tail_watcher.initialize(run_id, info.summary.path)
+            return [], True
+
+        info = self.get(run_id)
+        if info is None:
+            info = self.load(run_id, log_dir)
+
+        new_entries = self._tail_watcher.check_updates(info.summary.path, run_id)
+        return new_entries, False
 
     def _summarize_file(self, path: Path) -> RunSummary:
         line_count = sum(1 for _ in path.open(encoding="utf-8", errors="replace"))
