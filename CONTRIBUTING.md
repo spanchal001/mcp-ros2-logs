@@ -40,6 +40,7 @@ All tests must pass and ruff must report no issues before submitting a PR.
 ```
 src/mcp_ros2_logs/
   server.py       — FastMCP server, tool and resource definitions
+  config.py       — Runtime configuration (env var defaults)
   parser.py       — Log file parsing, custom format support
   store.py        — In-memory cache for parsed runs and bags
   resolver.py     — Log path resolution (env vars, auto-detection)

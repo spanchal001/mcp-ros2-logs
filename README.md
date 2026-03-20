@@ -34,10 +34,10 @@ claude mcp add --scope user ros2-logs -- mcp-ros2-logs
 
 This makes the server available in all Claude Code sessions. For project-scoped setup (current directory only), omit `--scope user`.
 
-To set a custom log directory:
+To set a custom log directory (and optionally a default result limit):
 
 ```bash
-claude mcp add --scope user ros2-logs -e MCP_ROS2_LOGS_DIR=/path/to/logs -- mcp-ros2-logs
+claude mcp add --scope user ros2-logs -e MCP_ROS2_LOGS_DIR=/path/to/logs -e MCP_ROS2_LOGS_MAX_RESULTS=50 -- mcp-ros2-logs
 ```
 
 ### Claude Desktop
@@ -50,7 +50,8 @@ Add to `~/.config/Claude/claude_desktop_config.json` (Linux) or `~/Library/Appli
     "ros2-logs": {
       "command": "mcp-ros2-logs",
       "env": {
-        "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs"
+        "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs",
+        "MCP_ROS2_LOGS_MAX_RESULTS": "100"
       }
     }
   }
@@ -67,7 +68,8 @@ Add to `.vscode/mcp.json` in your workspace:
     "ros2-logs": {
       "command": "mcp-ros2-logs",
       "env": {
-        "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs"
+        "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs",
+        "MCP_ROS2_LOGS_MAX_RESULTS": "100"
       }
     }
   }
@@ -85,7 +87,8 @@ Open **Settings > MCP Servers > Add Server** and configure:
   "ros2-logs": {
     "command": "mcp-ros2-logs",
     "env": {
-      "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs"
+      "MCP_ROS2_LOGS_DIR": "/path/to/your/ros2/logs",
+      "MCP_ROS2_LOGS_MAX_RESULTS": "100"
     }
   }
 }
@@ -216,6 +219,17 @@ The server resolves the log directory using this priority chain:
 5. `~/.ros/log/`
 
 It auto-detects whether a path is a single log file, a run directory (contains `.log` files), a bag directory (contains `metadata.yaml`), or a log root (contains run subdirectories).
+
+## Pagination
+
+All list-returning tools support `limit` and `offset` parameters for paginating results. When results are truncated, the output includes a notice with the next offset value. The only exceptions are `load_run` and `compare_runs`, which return fixed-structure summaries.
+
+The default limit is controlled by the `MCP_ROS2_LOGS_MAX_RESULTS` environment variable (default: `100`). `query_logs` and `query_bag_messages` keep their own default of 50.
+
+```bash
+# Set a global default limit
+claude mcp add --scope user ros2-logs -e MCP_ROS2_LOGS_MAX_RESULTS=50 -e MCP_ROS2_LOGS_DIR=/path/to/logs -- mcp-ros2-logs
+```
 
 ## Log Format
 

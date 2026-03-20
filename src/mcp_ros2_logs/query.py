@@ -33,9 +33,7 @@ class NodeSummary:
     message_rate: float
 
 
-def _parse_time(
-    time_str: str, run_start: float, run_end: float
-) -> float:
+def _parse_time(time_str: str, run_start: float, run_end: float) -> float:
     """Parse a time string into epoch float.
 
     Supports:
@@ -74,6 +72,7 @@ def query_logs(
     time_end: str | None = None,
     text: str | None = None,
     limit: int = 50,
+    offset: int = 0,
     context: int = 0,
 ) -> QueryResult:
     """Filter the merged log timeline with optional context windows."""
@@ -138,8 +137,8 @@ def query_logs(
     else:
         result_indices = match_indices
 
-    truncated = len(result_indices) > limit
-    result_indices = result_indices[:limit]
+    truncated = len(result_indices) > offset + limit
+    result_indices = result_indices[offset : offset + limit]
 
     return QueryResult(
         matches=[entries[i] for i in result_indices],
