@@ -56,11 +56,13 @@ def correlate_logs_to_bag(
         lo = bisect.bisect_left(msg_timestamps, entry.timestamp - window_s)
         hi = bisect.bisect_right(msg_timestamps, entry.timestamp + window_s)
         if lo < hi:
-            nearby = tuple(filtered_msgs[lo:hi])
-            correlations.append(Correlation(
-                log_entry=entry,
-                nearby_messages=nearby,
-                window_ms=window_ms,
-            ))
+            nearby = tuple(filtered_msgs[lo:hi][:20])
+            correlations.append(
+                Correlation(
+                    log_entry=entry,
+                    nearby_messages=nearby,
+                    window_ms=window_ms,
+                )
+            )
 
     return correlations

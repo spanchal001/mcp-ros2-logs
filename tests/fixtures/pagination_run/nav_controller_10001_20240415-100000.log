@@ -1,0 +1,60 @@
+[INFO] [1713175200.000000000] [nav_controller]: Navigation controller started
+[INFO] [1713175200.100000000] [nav_controller]: Subscribed to /goal_pose
+[INFO] [1713175200.200000000] [nav_controller]: Subscribed to /odom
+[INFO] [1713175200.300000000] [nav_controller]: Action server /navigate_to_pose ready
+[INFO] [1713175201.000000000] [nav_controller]: Received goal: x=1.0, y=2.0, theta=0.5
+[INFO] [1713175201.100000000] [nav_controller]: Planning path to goal
+[INFO] [1713175201.200000000] [nav_controller]: Path found: 12 waypoints
+[INFO] [1713175201.300000000] [nav_controller]: Following path, ETA 8.5s
+[INFO] [1713175202.000000000] [nav_controller]: Waypoint 1/12 reached
+[INFO] [1713175203.000000000] [nav_controller]: Waypoint 2/12 reached
+[INFO] [1713175204.000000000] [nav_controller]: Waypoint 3/12 reached
+[INFO] [1713175205.000000000] [nav_controller]: Waypoint 4/12 reached
+[WARN] [1713175205.500000000] [nav_controller]: Obstacle detected 0.8m ahead, replanning
+[INFO] [1713175205.600000000] [nav_controller]: Replan successful: 9 waypoints
+[INFO] [1713175206.000000000] [nav_controller]: Waypoint 5/12 reached
+[INFO] [1713175207.000000000] [nav_controller]: Waypoint 6/12 reached
+[INFO] [1713175208.000000000] [nav_controller]: Waypoint 7/12 reached
+[WARN] [1713175208.500000000] [nav_controller]: Costmap update delayed by 120ms
+[INFO] [1713175209.000000000] [nav_controller]: Waypoint 8/12 reached
+[INFO] [1713175210.000000000] [nav_controller]: Waypoint 9/12 reached
+[INFO] [1713175211.000000000] [nav_controller]: Waypoint 10/12 reached
+[ERROR] [1713175211.500000000] [nav_controller]: Lost localization confidence: 0.32 < 0.5 threshold
+[WARN] [1713175211.600000000] [nav_controller]: Stopping robot, requesting relocalization
+[INFO] [1713175212.000000000] [nav_controller]: Relocalization request sent to /amcl
+[INFO] [1713175213.000000000] [nav_controller]: Localization restored, confidence 0.87
+[INFO] [1713175213.100000000] [nav_controller]: Resuming navigation
+[INFO] [1713175214.000000000] [nav_controller]: Waypoint 11/12 reached
+[INFO] [1713175215.000000000] [nav_controller]: Waypoint 12/12 reached
+[INFO] [1713175215.500000000] [nav_controller]: Goal reached successfully
+[INFO] [1713175216.000000000] [nav_controller]: Received goal: x=3.5, y=-1.0, theta=1.2
+[INFO] [1713175216.100000000] [nav_controller]: Planning path to goal
+[INFO] [1713175216.200000000] [nav_controller]: Path found: 18 waypoints
+[INFO] [1713175216.300000000] [nav_controller]: Following path, ETA 14.2s
+[INFO] [1713175217.000000000] [nav_controller]: Waypoint 1/18 reached
+[INFO] [1713175218.000000000] [nav_controller]: Waypoint 2/18 reached
+[INFO] [1713175219.000000000] [nav_controller]: Waypoint 3/18 reached
+[INFO] [1713175220.000000000] [nav_controller]: Waypoint 4/18 reached
+[INFO] [1713175221.000000000] [nav_controller]: Waypoint 5/18 reached
+[INFO] [1713175222.000000000] [nav_controller]: Waypoint 6/18 reached
+[WARN] [1713175222.500000000] [nav_controller]: Velocity capped: requested 0.6 m/s, max 0.5 m/s
+[INFO] [1713175223.000000000] [nav_controller]: Waypoint 7/18 reached
+[INFO] [1713175224.000000000] [nav_controller]: Waypoint 8/18 reached
+[ERROR] [1713175224.500000000] [nav_controller]: Transform timeout: base_link -> map (200ms)
+[WARN] [1713175224.600000000] [nav_controller]: Using stale transform, age 350ms
+[INFO] [1713175225.000000000] [nav_controller]: Waypoint 9/18 reached
+[INFO] [1713175226.000000000] [nav_controller]: Waypoint 10/18 reached
+[INFO] [1713175227.000000000] [nav_controller]: Waypoint 11/18 reached
+[ERROR] [1713175227.500000000] [nav_controller]: Controller plugin failed: dwb_core timeout
+[WARN] [1713175227.600000000] [nav_controller]: Falling back to recovery behavior: spin
+[INFO] [1713175228.000000000] [nav_controller]: Recovery spin complete
+[INFO] [1713175228.100000000] [nav_controller]: Replanning from current position
+[INFO] [1713175228.200000000] [nav_controller]: Path found: 8 waypoints
+[INFO] [1713175229.000000000] [nav_controller]: Waypoint 12/18 reached
+[INFO] [1713175230.000000000] [nav_controller]: Waypoint 13/18 reached
+[INFO] [1713175231.000000000] [nav_controller]: Waypoint 14/18 reached
+[INFO] [1713175232.000000000] [nav_controller]: Waypoint 15/18 reached
+[INFO] [1713175233.000000000] [nav_controller]: Waypoint 16/18 reached
+[INFO] [1713175234.000000000] [nav_controller]: Waypoint 17/18 reached
+[INFO] [1713175235.000000000] [nav_controller]: Waypoint 18/18 reached
+[INFO] [1713175235.500000000] [nav_controller]: Goal reached successfully

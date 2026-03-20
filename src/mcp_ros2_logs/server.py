@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_ros2_logs.config import get_default_limit
 from mcp_ros2_logs.anomaly import detect_anomalies
 from mcp_ros2_logs.compare import compare_runs
 from mcp_ros2_logs.correlate import correlate_logs_to_bag
@@ -26,16 +27,38 @@ def _ts_to_str(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
+def _paginate(items: list, limit: int, offset: int) -> tuple[list, int, str]:
+    """Slice items by offset/limit and return (page, total, truncation_notice)."""
+    total = len(items)
+    page = items[offset : offset + limit]
+    if len(page) < total:
+        notice = f"Showing {len(page)} of {total} results (offset {offset})."
+        if offset + limit < total:
+            notice += f" Use offset={offset + limit} to see more."
+    else:
+        notice = ""
+    return page, total, notice
+
+
 @mcp.tool()
-def list_runs(log_dir: str | None = None) -> str:
+def list_runs(
+    log_dir: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> str:
     """List available ROS2 log runs with summary info.
 
     Args:
         log_dir: Optional path to log directory. If not provided,
                  resolves via MCP_ROS2_LOGS_DIR, ROS_LOG_DIR, or ~/.ros/log.
+        limit: Maximum runs to return. Defaults to MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of runs to skip (default 0).
     """
-    summaries = store.list_runs(log_dir)
-    return json.dumps(
+    if limit is None:
+        limit = get_default_limit()
+    all_summaries = store.list_runs(log_dir)
+    page, _, notice = _paginate(all_summaries, limit, offset)
+    output = json.dumps(
         [
             {
                 "run_id": s.run_id,
@@ -43,10 +66,13 @@ def list_runs(log_dir: str | None = None) -> str:
                 "num_files": s.num_files,
                 "total_lines": s.total_lines,
             }
-            for s in summaries
+            for s in page
         ],
         indent=2,
     )
+    if notice:
+        return notice + "\n\n" + output
+    return output
 
 
 @mcp.tool()
@@ -79,6 +105,7 @@ def query_logs_tool(
     time_end: str | None = None,
     text: str | None = None,
     limit: int = 50,
+    offset: int = 0,
     context: int = 0,
     log_dir: str | None = None,
 ) -> str:
@@ -103,6 +130,7 @@ def query_logs_tool(
               as regex if it contains special characters (*, +, ?, [, etc).
         limit: Maximum entries to return (default 50). Total match count is
                always reported even if truncated.
+        offset: Number of entries to skip (default 0).
         context: Include N messages before and after each match across ALL
                  nodes. Enables cascade analysis (e.g., context=5 shows what
                  happened on other nodes around each error). Overlapping
@@ -121,12 +149,19 @@ def query_logs_tool(
         time_end=time_end,
         text=text,
         limit=limit,
+        offset=offset,
         context=context,
     )
 
     lines = [f"Matches: {result.total_matches}"]
+    shown = len(result.matches)
     if result.truncated:
-        lines[0] += f" (showing first {len(result.matches)})"
+        lines.append(
+            f"Showing {shown} of {result.total_matches} results (offset {offset}). "
+            f"Use offset={offset + shown} to see more."
+        )
+    elif offset > 0:
+        lines.append(f"Showing {shown} results (offset {offset}).")
     lines.append("")
 
     for e in result.matches:
@@ -140,6 +175,8 @@ def query_logs_tool(
 def get_node_summary_tool(
     run_id: str,
     node: str,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Get detailed analysis of a specific node's log activity. Use after load_run.
@@ -151,6 +188,9 @@ def get_node_summary_tool(
     Args:
         run_id: Run ID from list_runs or a direct path to a log file/directory.
         node: Node name to analyze (e.g., "sensor_driver", "motion_planner").
+        limit: Cap unique_errors and stack_traces lists. Defaults to
+               MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of items to skip in unique_errors and stack_traces (default 0).
         log_dir: Optional path to log directory override.
     """
     info = store.get(run_id)
@@ -161,10 +201,14 @@ def get_node_summary_tool(
     if summary is None:
         return f"Node '{node}' not found. Available nodes: {', '.join(info.nodes)}"
 
-    return _format_node_summary(summary)
+    if limit is None:
+        limit = get_default_limit()
+    return _format_node_summary(summary, limit=limit, offset=offset)
 
 
-def _format_node_summary(summary: object) -> str:
+def _format_node_summary(
+    summary: object, limit: int | None = None, offset: int = 0
+) -> str:
     """Format a NodeSummary into readable text."""
     lines = [
         f"Node: {summary.node}",
@@ -185,17 +229,31 @@ def _format_node_summary(summary: object) -> str:
         lines.append(f"  [{count}x] {pattern}")
 
     if summary.unique_errors:
+        errors = summary.unique_errors
+        if limit is not None:
+            errors, _, err_notice = _paginate(errors, limit, offset)
+        else:
+            err_notice = ""
         lines.append("")
-        lines.append("Unique errors:")
-        for e in summary.unique_errors:
+        lines.append(f"Unique errors ({len(summary.unique_errors)} total):")
+        if err_notice:
+            lines.append(f"  {err_notice}")
+        for e in errors:
             ts = _ts_to_str(e.timestamp)
             first_line = e.message.split("\n", 1)[0]
             lines.append(f"  [{e.severity}] [{ts}] {first_line}")
 
     if summary.stack_traces:
+        traces = summary.stack_traces
+        if limit is not None:
+            traces, _, trace_notice = _paginate(traces, limit, offset)
+        else:
+            trace_notice = ""
         lines.append("")
         lines.append(f"Stack traces: {len(summary.stack_traces)} found")
-        for e in summary.stack_traces:
+        if trace_notice:
+            lines.append(f"  {trace_notice}")
+        for e in traces:
             ts = _ts_to_str(e.timestamp)
             lines.append(f"  [{e.severity}] [{ts}]:")
             for trace_line in e.message.split("\n"):
@@ -230,9 +288,7 @@ def _format_timeline(result: object) -> str:
                 )
         elif isinstance(ev, SeverityTransition):
             ts = _ts_short(ev.timestamp)
-            lines.append(
-                f"[{ts}] {ev.node}: {ev.from_severity} -> {ev.to_severity}"
-            )
+            lines.append(f"[{ts}] {ev.node}: {ev.from_severity} -> {ev.to_severity}")
         elif isinstance(ev, NodeGap):
             start = _ts_short(ev.gap_start)
             end = _ts_short(ev.gap_end)
@@ -249,6 +305,8 @@ def get_timeline_tool(
     time_start: str | None = None,
     time_end: str | None = None,
     nodes: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Get a condensed narrative summary of a ROS2 log run. Use after load_run.
@@ -264,8 +322,12 @@ def get_timeline_tool(
                     ("-30s" = 30s before run end, "+10s" = 10s after run start).
         time_end: End time filter. Same format as time_start.
         nodes: Filter by node name(s). Comma-separated: "sensor_driver,planner".
+        limit: Maximum events to return. Defaults to MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of events to skip (default 0).
         log_dir: Optional path to log directory override.
     """
+    if limit is None:
+        limit = get_default_limit()
     info = store.get(run_id)
     if info is None:
         info = store.load(run_id, log_dir)
@@ -277,7 +339,12 @@ def get_timeline_tool(
         nodes=nodes,
     )
 
-    return _format_timeline(result)
+    page, _, notice = _paginate(result.events, limit, offset)
+    result.events = page
+    output = _format_timeline(result)
+    if notice:
+        return notice + "\n" + output
+    return output
 
 
 @mcp.tool()
@@ -332,7 +399,9 @@ def compare_runs_tool(
     # Novel messages
     if result.novel_messages:
         lines.append("")
-        lines.append(f"Novel errors/warnings in {run_id_2} ({len(result.novel_messages)}):")
+        lines.append(
+            f"Novel errors/warnings in {run_id_2} ({len(result.novel_messages)}):"
+        )
         for e in result.novel_messages:
             ts = _ts_to_str(e.timestamp)
             first_line = e.message.split("\n", 1)[0]
@@ -344,9 +413,7 @@ def compare_runs_tool(
     # First divergence
     if result.first_divergence is not None:
         lines.append("")
-        lines.append(
-            f"First divergence: {_ts_to_str(result.first_divergence)}"
-        )
+        lines.append(f"First divergence: {_ts_to_str(result.first_divergence)}")
 
     # Timing diffs
     if result.timing_diffs:
@@ -363,6 +430,8 @@ def detect_anomalies_tool(
     run_id: str,
     baseline_ratio: float = 0.3,
     min_severity_score: float = 0.0,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Detect anomalous patterns in a ROS2 log run. Use after load_run.
@@ -377,8 +446,12 @@ def detect_anomalies_tool(
                         (default 0.3 = first 30%).
         min_severity_score: Only return anomalies with severity_score >= this
                             value (0.0-1.0). Default 0.0 returns all.
+        limit: Maximum anomalies to return. Defaults to MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of anomalies to skip (default 0).
         log_dir: Optional path to log directory override.
     """
+    if limit is None:
+        limit = get_default_limit()
     info = store.get(run_id)
     if info is None:
         info = store.load(run_id, log_dir)
@@ -391,8 +464,13 @@ def detect_anomalies_tool(
     if not anomalies:
         return "No anomalies detected."
 
-    lines = [f"Anomalies detected: {len(anomalies)}", ""]
-    for a in anomalies:
+    page, total, notice = _paginate(anomalies, limit, offset)
+
+    lines = [f"Anomalies detected: {total}"]
+    if notice:
+        lines.append(notice)
+    lines.append("")
+    for a in page:
         ts = _ts_to_str(a.timestamp)
         lines.append(
             f"[{a.anomaly_type}] [{ts}] [{a.node}] "
@@ -405,24 +483,34 @@ def detect_anomalies_tool(
 @mcp.tool()
 def list_bag_topics(
     run_id: str,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """List topics in a ROS2 bag file with message types and counts.
 
     Args:
         run_id: Bag directory name or path.
+        limit: Maximum topics to return. Defaults to MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of topics to skip (default 0).
         log_dir: Optional path to log directory override.
     """
+    if limit is None:
+        limit = get_default_limit()
     bag_info, _ = store.get_bag(run_id) or store.load_bag(run_id, log_dir)
+
+    page, _, notice = _paginate(bag_info.topics, limit, offset)
 
     lines = [
         f"Bag: {bag_info.path.name}",
         f"Duration: {bag_info.duration:.1f}s",
         f"Total messages: {bag_info.message_count}",
-        "",
-        "Topics:",
     ]
-    for t in bag_info.topics:
+    if notice:
+        lines.append(notice)
+    lines.append("")
+    lines.append("Topics:")
+    for t in page:
         lines.append(f"  {t['name']} [{t['type']}] — {t['count']} messages")
 
     return "\n".join(lines)
@@ -435,6 +523,7 @@ def query_bag_messages(
     time_start: str | None = None,
     time_end: str | None = None,
     limit: int = 50,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Query bag messages filtered by topic and time range.
@@ -445,6 +534,7 @@ def query_bag_messages(
         time_start: Start time filter (epoch or relative "-30s").
         time_end: End time filter (epoch or relative).
         limit: Maximum messages to return (default 50).
+        offset: Number of messages to skip (default 0).
         log_dir: Optional path to log directory override.
     """
     bag_info, messages = store.get_bag(run_id) or store.load_bag(run_id, log_dir)
@@ -454,19 +544,29 @@ def query_bag_messages(
         filtered = [m for m in filtered if m.topic == topic]
 
     if time_start:
-        ts = float(time_start) if not time_start.startswith(("-", "+")) else _resolve_bag_time(time_start, bag_info)
+        ts = (
+            float(time_start)
+            if not time_start.startswith(("-", "+"))
+            else _resolve_bag_time(time_start, bag_info)
+        )
         filtered = [m for m in filtered if m.timestamp >= ts]
     if time_end:
-        te = float(time_end) if not time_end.startswith(("-", "+")) else _resolve_bag_time(time_end, bag_info)
+        te = (
+            float(time_end)
+            if not time_end.startswith(("-", "+"))
+            else _resolve_bag_time(time_end, bag_info)
+        )
         filtered = [m for m in filtered if m.timestamp <= te]
 
     total = len(filtered)
-    truncated = total > limit
-    filtered = filtered[:limit]
+    filtered = filtered[offset : offset + limit]
 
     lines = [f"Messages: {total}"]
-    if truncated:
-        lines[0] += f" (showing first {limit})"
+    if len(filtered) < total:
+        notice = f"Showing {len(filtered)} of {total} results (offset {offset})."
+        if offset + limit < total:
+            notice += f" Use offset={offset + limit} to see more."
+        lines.append(notice)
     lines.append("")
 
     for m in filtered:
@@ -483,6 +583,8 @@ def correlate_tool(
     severity: str = "ERROR,FATAL",
     window_ms: float = 100.0,
     topics: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Correlate log entries with bag topic messages within a time window.
@@ -498,8 +600,13 @@ def correlate_tool(
         severity: Log severity filter (default "ERROR,FATAL").
         window_ms: Time window in milliseconds (default 100ms, symmetric).
         topics: Comma-separated topic names to include (default: all topics).
+        limit: Maximum correlations to return. Defaults to
+               MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of correlations to skip (default 0).
         log_dir: Optional path to log directory override.
     """
+    if limit is None:
+        limit = get_default_limit()
     info = store.get(run_id)
     if info is None:
         info = store.load(run_id, log_dir)
@@ -526,8 +633,13 @@ def correlate_tool(
     if not correlations:
         return "No correlations found."
 
-    lines = [f"Correlations: {len(correlations)}", ""]
-    for c in correlations:
+    page, total, notice = _paginate(correlations, limit, offset)
+
+    lines = [f"Correlations: {total}"]
+    if notice:
+        lines.append(notice)
+    lines.append("")
+    for c in page:
         ts = _ts_to_str(c.log_entry.timestamp)
         lines.append(
             f"[{c.log_entry.severity}] [{ts}] [{c.log_entry.node}]: "
@@ -540,9 +652,7 @@ def correlate_tool(
         lines.append(f"  Nearby topics (within +/-{window_ms:.0f}ms):")
         for topic_name, msgs in sorted(by_topic.items()):
             msg_type = msgs[0].message_type
-            lines.append(
-                f"    {topic_name} ({len(msgs)} msgs, {msg_type})"
-            )
+            lines.append(f"    {topic_name} ({len(msgs)} msgs, {msg_type})")
         lines.append("")
 
     return "\n".join(lines)
@@ -551,6 +661,8 @@ def correlate_tool(
 @mcp.tool()
 def tail_logs_tool(
     run_id: str,
+    limit: int | None = None,
+    offset: int = 0,
     log_dir: str | None = None,
 ) -> str:
     """Tail a ROS2 log run for new entries since last check.
@@ -561,8 +673,13 @@ def tail_logs_tool(
 
     Args:
         run_id: Run ID from list_runs or a direct path to a log file/directory.
+        limit: Maximum new entries to return. Defaults to
+               MCP_ROS2_LOGS_MAX_RESULTS (100).
+        offset: Number of new entries to skip (default 0).
         log_dir: Optional path to log directory override.
     """
+    if limit is None:
+        limit = get_default_limit()
     new_entries, is_first = store.tail(run_id, log_dir)
 
     if is_first:
@@ -577,8 +694,13 @@ def tail_logs_tool(
     if not new_entries:
         return "No new entries."
 
-    lines = [f"New entries: {len(new_entries)}", ""]
-    for e in new_entries:
+    page, total, notice = _paginate(new_entries, limit, offset)
+
+    lines = [f"New entries: {total}"]
+    if notice:
+        lines.append(notice)
+    lines.append("")
+    for e in page:
         ts = _ts_to_str(e.timestamp)
         lines.append(f"[{e.severity}] [{ts}] [{e.node}]: {e.message}")
 
