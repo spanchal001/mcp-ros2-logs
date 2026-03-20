@@ -6,11 +6,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versions follow 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-19
+
 ### Added
 - **Pagination**: `limit` and `offset` parameters on all list-returning tools (`list_runs`, `query_logs`, `get_node_summary`, `get_timeline`, `detect_anomalies`, `list_bag_topics`, `query_bag_messages`, `correlate`, `tail_logs`). Truncated output includes a notice with the next offset value.
 - `MCP_ROS2_LOGS_MAX_RESULTS` environment variable to set the default result limit globally (default: 100).
 - `config.py` module for runtime configuration.
+- `CHANGELOG.md` for tracking release notes.
 - Pagination test suite (`test_pagination.py`, 11 tests).
+- 182 tests (up from 171).
 
 ### Changed
 - `correlate`: `nearby_messages` per correlation capped at 20 to prevent unbounded output on wide time windows.
@@ -46,7 +50,8 @@ Initial release.
 - Log path resolution via `MCP_ROS2_LOGS_DIR`, `ROS_LOG_DIR`, `ROS_HOME`, `~/.ros/log`.
 - 109 tests.
 
-[Unreleased]: https://github.com/spanchal001/mcp-ros2-logs/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/spanchal001/mcp-ros2-logs/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/spanchal001/mcp-ros2-logs/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/spanchal001/mcp-ros2-logs/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/spanchal001/mcp-ros2-logs/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/spanchal001/mcp-ros2-logs/releases/tag/v0.1.0
