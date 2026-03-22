@@ -231,6 +231,43 @@ The default limit is controlled by the `MCP_ROS2_LOGS_MAX_RESULTS` environment v
 claude mcp add --scope user ros2-logs -e MCP_ROS2_LOGS_MAX_RESULTS=50 -e MCP_ROS2_LOGS_DIR=/path/to/logs -- mcp-ros2-logs
 ```
 
+## Remote Deployment
+
+To run the server over HTTP for remote clients (Stack AI, etc.):
+
+### SSE Transport
+
+```bash
+mcp-ros2-logs --transport sse --host 0.0.0.0 --port 8000
+```
+
+Endpoints: `GET /sse` (event stream), `POST /messages/` (client requests).
+
+### Streamable HTTP Transport
+
+```bash
+mcp-ros2-logs --transport streamable-http --host 0.0.0.0 --port 8000
+```
+
+Endpoint: `POST /mcp`.
+
+### Docker
+
+```bash
+docker build -t mcp-ros2-logs .
+docker run -p 8000:8000 -e MCP_ROS2_LOGS_DIR=/logs -v /path/to/logs:/logs mcp-ros2-logs
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_ROS2_LOGS_TRANSPORT` | `stdio` | Transport protocol (`stdio`, `sse`, `streamable-http`) |
+| `MCP_ROS2_LOGS_HOST` | `0.0.0.0` | Bind address for SSE/HTTP transports |
+| `MCP_ROS2_LOGS_PORT` | `8000` | Bind port for SSE/HTTP transports |
+| `MCP_ROS2_LOGS_DIR` | — | Log directory path |
+| `MCP_ROS2_LOGS_MAX_RESULTS` | `100` | Default pagination limit |
+
 ## Log Format
 
 Parses the standard ROS2 spdlog default format:

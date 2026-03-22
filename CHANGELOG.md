@@ -6,6 +6,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versions follow 
 
 ## [Unreleased]
 
+### Added
+- **Remote transport**: SSE and Streamable HTTP transport via `--transport` flag for remote deployment (Stack AI, etc.).
+- `Dockerfile` for container deployment.
+- `MCP_ROS2_LOGS_TRANSPORT`, `MCP_ROS2_LOGS_HOST`, `MCP_ROS2_LOGS_PORT` environment variables.
+
 ## [0.4.0] - 2026-03-19
 
 ### Added

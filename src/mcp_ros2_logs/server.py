@@ -787,4 +787,31 @@ def resource_errors(run_id: str) -> str:
 
 
 def main() -> None:
-    mcp.run()
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(description="MCP server for ROS2 log analysis")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default=os.environ.get("MCP_ROS2_LOGS_TRANSPORT", "stdio"),
+        help="Transport protocol (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("MCP_ROS2_LOGS_HOST", "0.0.0.0"),
+        help="Host to bind to for SSE/HTTP transports (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("MCP_ROS2_LOGS_PORT", "8000")),
+        help="Port to bind to for SSE/HTTP transports (default: 8000)",
+    )
+    args = parser.parse_args()
+
+    if args.transport != "stdio":
+        mcp.settings.host = args.host
+        mcp.settings.port = args.port
+
+    mcp.run(transport=args.transport)
